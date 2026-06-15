@@ -52,7 +52,7 @@ export default function NewSitePage() {
               <div className="form-group">
                 <label className="form-label">Site Type</label>
                 <select className="form-input" value={site.siteType} onChange={e => setSite({ ...site, siteType: e.target.value })}>
-                  {[['office', 'Office'], ['coworking', 'Coworking Space'], ['clinic', 'Clinic/Healthcare'], ['school', 'School/Education'], ['studio', 'Studio'], ['retail', 'Retail'], ['warehouse', 'Warehouse']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  {[['office', 'Office'], ['coworking', 'Coworking Space'], ['clinic', 'Clinic/Healthcare'], ['school', 'School/Education'], ['studio', 'Studio'], ['other', 'Other']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
               <div className="form-group">
