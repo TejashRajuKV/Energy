@@ -241,9 +241,19 @@ export default function NewAnalysisWizard() {
                           <input className="form-input" type="number" value={item.ratedWatts} style={{ padding: '0.4rem 0.7rem', fontSize: '0.875rem' }}
                             onChange={e => { const upd = [...equipment]; upd[i] = { ...upd[i], ratedWatts: parseInt(e.target.value) }; setEquipment(upd); }} />
                         </div>
-                        <span className={`badge ${item.usagePattern === 'always_on' ? 'badge-terracotta' : item.usagePattern === 'intermittent' ? 'badge-gold' : 'badge-sage'}`} style={{ fontSize: '0.68rem' }}>
-                          {item.usagePattern.replace('_', ' ')}
-                        </span>
+                        <div className="form-group" style={{ gap: '0.3rem' }}>
+                          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Usage</label>
+                          <select 
+                            className="form-input" 
+                            value={item.usagePattern} 
+                            style={{ padding: '0.4rem 0.7rem', fontSize: '0.875rem', cursor: 'pointer' }}
+                            onChange={e => { const upd = [...equipment]; upd[i] = { ...upd[i], usagePattern: e.target.value }; setEquipment(upd); }}
+                          >
+                            <option value="scheduled">Scheduled</option>
+                            <option value="always_on">Always On</option>
+                            <option value="intermittent">Intermittent</option>
+                          </select>
+                        </div>
                       </div>
                     ))}
                   </div>
