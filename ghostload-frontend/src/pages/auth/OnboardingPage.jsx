@@ -10,7 +10,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { fetchMe } = useAuthStore();
   const [step, setStep] = useState(0);
-  const [org, setOrg] = useState({ name: '', industry: '', companySize: '' });
+  const [org, setOrg] = useState({ name: '', industry: 'Technology', companySize: '11-50' });
   const [site, setSite] = useState({ name: '', siteType: 'office', city: '', floorAreaSqft: '' });
   const [loading, setLoading] = useState(false);
 
