@@ -1,0 +1,424 @@
+// GhostLoad — Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────
+
+enum AuthProvider {
+  email
+  google
+}
+
+enum OrgRole {
+  owner
+  admin
+  analyst
+  viewer
+}
+
+enum SiteType {
+  office
+  coworking
+  clinic
+  studio
+  school
+  other
+}
+
+enum WeekendUsageLevel {
+  none
+  low
+  medium
+  high
+}
+
+enum HvacType {
+  central_ac
+  split_ac
+  vrf
+  chiller
+  none
+  other
+}
+
+enum TariffType {
+  flat
+  tou
+  estimated
+}
+
+enum EquipmentCategory {
+  hvac
+  lighting
+  compute
+  network
+  kitchen
+  misc
+}
+
+enum UsagePattern {
+  scheduled
+  intermittent
+  always_on
+}
+
+enum EffortLevel {
+  low
+  medium
+  high
+}
+
+enum ReportType {
+  pdf
+  csv
+  share
+}
+
+enum SourceType {
+  manual
+  upload
+  api
+}
+
+// ─────────────────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────────────────
+
+model User {
+  id                  String    @id @default(uuid())
+  name                String    @db.VarChar(120)
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String?   @map("password_hash")
+  authProvider        AuthProvider @default(email) @map("auth_provider")
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  avatarUrl           String?   @map("avatar_url")
+  preferredCurrency   String    @default("INR") @map("preferred_currency") @db.VarChar(10)
+  timezone            String    @default("Asia/Kolkata") @db.VarChar(50)
+  resetToken          String?   @unique @map("reset_token")
+  resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  orgMemberships      OrgMember[]
+  createdOrgs         Organization[]
+  analyses            Analysis[]
+  scenarios           Scenario[]
+  reports             Report[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────
+// ORGANIZATIONS
+// ─────────────────────────────────────────────────────────
+
+model Organization {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(150)
+  slug         String   @unique @db.VarChar(80)
+  industry     String?  @db.VarChar(80)
+  companySize  String?  @map("company_size") @db.VarChar(30)
+  billingEmail String?  @map("billing_email") @db.VarChar(255)
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator      User      @relation(fields: [createdBy], references: [id])
+  members      OrgMember[]
+  sites        Site[]
+  auditLogs    AuditLog[]
+
+  @@map("organizations")
+}
+
+// ─────────────────────────────────────────────────────────
+// ORGANIZATION MEMBERS
+// ─────────────────────────────────────────────────────────
+
+model OrgMember {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  userId         String    @map("user_id")
+  role           OrgRole   @default(viewer)
+  invitedBy      String?   @map("invited_by")
+  joinedAt       DateTime? @map("joined_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ─────────────────────────────────────────────────────────
+// SITES
+// ─────────────────────────────────────────────────────────
+
+model Site {
+  id               String            @id @default(uuid())
+  organizationId   String            @map("organization_id")
+  name             String            @db.VarChar(150)
+  siteType         SiteType          @default(office) @map("site_type")
+  city             String            @db.VarChar(100)
+  country          String            @default("India") @db.VarChar(100)
+  timezone         String            @default("Asia/Kolkata") @db.VarChar(50)
+  floorAreaSqft    Int               @map("floor_area_sqft")
+  occupantsMin     Int?              @map("occupants_min")
+  occupantsMax     Int?              @map("occupants_max")
+  hvacType         HvacType?         @map("hvac_type")
+  hasServerRoom    Boolean           @default(false) @map("has_server_room")
+  weekendUsage     WeekendUsageLevel @default(none) @map("weekend_usage_level")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule         SiteSchedule?
+  bills            UtilityBill[]
+  equipment        EquipmentProfile[]
+  analyses         Analysis[]
+
+  @@index([organizationId])
+  @@map("sites")
+}
+
+// ─────────────────────────────────────────────────────────
+// SITE SCHEDULES
+// ─────────────────────────────────────────────────────────
+
+model SiteSchedule {
+  id                  String   @id @default(uuid())
+  siteId              String   @unique @map("site_id")
+  weekdayOpenTime     String   @map("weekday_open_time")   // "09:00"
+  weekdayCloseTime    String   @map("weekday_close_time")  // "18:00"
+  saturdayOpenTime    String?  @map("saturday_open_time")
+  saturdayCloseTime   String?  @map("saturday_close_time")
+  sundayOpenTime      String?  @map("sunday_open_time")
+  sundayCloseTime     String?  @map("sunday_close_time")
+  cleaningStartTime   String?  @map("cleaning_start_time")
+  cleaningEndTime     String?  @map("cleaning_end_time")
+  securityAlwaysOn    Boolean  @default(true) @map("security_always_on")
+  hvacPrecoolMins     Int      @default(30) @map("hvac_precool_minutes")
+  hvacPostcoolMins    Int      @default(30) @map("hvac_postcool_minutes")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  site                Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_schedules")
+}
+
+// ─────────────────────────────────────────────────────────
+// UTILITY BILLS
+// ─────────────────────────────────────────────────────────
+
+model UtilityBill {
+  id                 String     @id @default(uuid())
+  siteId             String     @map("site_id")
+  billingPeriodStart DateTime   @map("billing_period_start") @db.Date
+  billingPeriodEnd   DateTime   @map("billing_period_end") @db.Date
+  billAmount         Decimal    @map("bill_amount") @db.Decimal(12, 2)
+  currency           String     @default("INR") @db.VarChar(10)
+  kwhTotal           Decimal?   @map("kwh_total") @db.Decimal(12, 2)
+  tariffType         TariffType @default(flat) @map("tariff_type")
+  unitRate           Decimal?   @map("unit_rate") @db.Decimal(10, 4)
+  peakRate           Decimal?   @map("peak_rate") @db.Decimal(10, 4)
+  offpeakRate        Decimal?   @map("offpeak_rate") @db.Decimal(10, 4)
+  sourceType         SourceType @default(manual) @map("source_type")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  site               Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  analyses           Analysis[]
+
+  @@index([siteId])
+  @@map("utility_bills")
+}
+
+// ─────────────────────────────────────────────────────────
+// EQUIPMENT PROFILES
+// ─────────────────────────────────────────────────────────
+
+model EquipmentProfile {
+  id                 String            @id @default(uuid())
+  siteId             String            @map("site_id")
+  category           EquipmentCategory
+  itemName           String            @map("item_name") @db.VarChar(120)
+  quantity           Int
+  ratedWatts         Int?              @map("rated_watts")
+  activeHoursPerDay  Decimal?          @map("active_hours_per_day") @db.Decimal(5, 2)
+  standbyHoursPerDay Decimal?          @map("standby_hours_per_day") @db.Decimal(5, 2)
+  standbyWatts       Int?              @map("standby_watts")
+  usagePattern       UsagePattern      @default(scheduled) @map("usage_pattern")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  site               Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@map("equipment_profiles")
+}
+
+// ─────────────────────────────────────────────────────────
+// ANALYSES
+// ─────────────────────────────────────────────────────────
+
+model Analysis {
+  id                       String   @id @default(uuid())
+  siteId                   String   @map("site_id")
+  utilityBillId            String   @map("utility_bill_id")
+  analysisVersion          String   @default("1.0") @map("analysis_version") @db.VarChar(20)
+  totalEstimatedKwh        Decimal  @map("total_estimated_kwh") @db.Decimal(12, 2)
+  estimatedAfterHoursKwh   Decimal  @map("estimated_after_hours_kwh") @db.Decimal(12, 2)
+  estimatedAfterHoursCost  Decimal  @map("estimated_after_hours_cost") @db.Decimal(12, 2)
+  estimatedWasteRatio      Decimal  @map("estimated_waste_ratio") @db.Decimal(5, 2)
+  annualCo2Kg              Decimal  @map("annual_co2_kg") @db.Decimal(12, 2)
+  confidenceScore          Decimal  @map("confidence_score") @db.Decimal(4, 2)
+  assumptionsJson          Json     @map("assumptions_json")
+  weatherContextJson       Json?    @map("weather_context_json")
+  createdBy                String   @map("created_by")
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  // Relations
+  site             Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  bill             UtilityBill         @relation(fields: [utilityBillId], references: [id])
+  creator          User                @relation(fields: [createdBy], references: [id])
+  breakdowns       AnalysisBreakdown[]
+  recommendations  Recommendation[]
+  scenarios        Scenario[]
+  reports          Report[]
+
+  @@index([siteId])
+  @@map("analyses")
+}
+
+// ─────────────────────────────────────────────────────────
+// ANALYSIS BREAKDOWNS
+// ─────────────────────────────────────────────────────────
+
+model AnalysisBreakdown {
+  id             String            @id @default(uuid())
+  analysisId     String            @map("analysis_id")
+  category       EquipmentCategory
+  estimatedKwh   Decimal           @map("estimated_kwh") @db.Decimal(12, 2)
+  estimatedCost  Decimal           @map("estimated_cost") @db.Decimal(12, 2)
+  estimatedCo2Kg Decimal           @map("estimated_co2_kg") @db.Decimal(12, 2)
+  sharePercent   Decimal           @map("share_percent") @db.Decimal(5, 2)
+  rationale      String
+
+  // Relations
+  analysis       Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("analysis_breakdowns")
+}
+
+// ─────────────────────────────────────────────────────────
+// RECOMMENDATIONS
+// ─────────────────────────────────────────────────────────
+
+model Recommendation {
+  id                      String            @id @default(uuid())
+  analysisId              String            @map("analysis_id")
+  category                EquipmentCategory
+  title                   String            @db.VarChar(180)
+  description             String
+  effortLevel             EffortLevel       @map("effort_level")
+  estimatedMonthlySavings Decimal           @map("estimated_monthly_savings") @db.Decimal(12, 2)
+  estimatedAnnualCo2Kg    Decimal           @map("estimated_annual_co2_kg") @db.Decimal(12, 2)
+  paybackMonths           Decimal?          @map("payback_months") @db.Decimal(8, 2)
+  confidenceScore         Decimal           @map("confidence_score") @db.Decimal(4, 2)
+  priorityRank            Int               @map("priority_rank")
+  createdAt               DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  analysis                Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("recommendations")
+}
+
+// ─────────────────────────────────────────────────────────
+// SCENARIOS
+// ─────────────────────────────────────────────────────────
+
+model Scenario {
+  id                      String   @id @default(uuid())
+  analysisId              String   @map("analysis_id")
+  name                    String   @db.VarChar(120)
+  changesJson             Json     @map("changes_json")
+  projectedMonthlySavings Decimal  @map("projected_monthly_savings") @db.Decimal(12, 2)
+  projectedAnnualCo2Kg    Decimal  @map("projected_annual_co2_kg") @db.Decimal(12, 2)
+  projectedWasteRatio     Decimal  @map("projected_waste_ratio") @db.Decimal(5, 2)
+  createdBy               String   @map("created_by")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  // Relations
+  analysis  Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  creator   User     @relation(fields: [createdBy], references: [id])
+
+  @@index([analysisId])
+  @@map("scenarios")
+}
+
+// ─────────────────────────────────────────────────────────
+// REPORTS
+// ─────────────────────────────────────────────────────────
+
+model Report {
+  id          String     @id @default(uuid())
+  analysisId  String     @map("analysis_id")
+  reportType  ReportType @map("report_type")
+  fileUrl     String?    @map("file_url")
+  shareToken  String?    @unique @map("share_token") @db.VarChar(120)
+  createdBy   String     @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  creator     User     @relation(fields: [createdBy], references: [id])
+
+  @@index([analysisId])
+  @@map("reports")
+}
+
+// ─────────────────────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  actorUserId    String   @map("actor_user_id")
+  eventType      String   @db.VarChar(50)
+  entityType     String   @db.VarChar(50)
+  entityId       String?  @map("entity_id")
+  metadataJson   Json     @map("metadata_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User         @relation(fields: [actorUserId], references: [id])
+
+  @@index([organizationId])
+  @@map("audit_logs")
+}
