@@ -27,7 +27,6 @@ services:
   - type: web
     name: ghostload-frontend
     env: static
-    plan: free
     rootDir: ghostload-frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
