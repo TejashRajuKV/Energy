@@ -24,7 +24,7 @@ export default function ScenarioSimulatorPage() {
 
   useEffect(() => {
     api.get(`/api/analyses/${analysisId}`).then(r => setAnalysis(r.data));
-    api.get(`/api/analyses/${analysisId}/scenarios`).then(r => setScenarios(r.data));
+    api.get(`/api/scenarios/${analysisId}/scenarios`).then(r => setScenarios(r.data));
   }, [analysisId]);
 
   const baseCost = analysis ? Number(analysis.estimatedAfterHoursCost) : 0;
@@ -43,7 +43,7 @@ export default function ScenarioSimulatorPage() {
   const saveScenario = async () => {
     setComputing(true);
     try {
-      const res = await api.post(`/api/analyses/${analysisId}/scenarios`, { name: scenarioName, changesJson: changes });
+      const res = await api.post(`/api/scenarios/${analysisId}/scenarios`, { name: scenarioName, changesJson: changes });
       setScenarios(prev => [res.data, ...prev]);
       toast.success('Scenario saved!');
     } catch { toast.error('Failed to save scenario'); }
