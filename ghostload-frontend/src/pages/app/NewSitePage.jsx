@@ -14,6 +14,8 @@ export default function NewSitePage() {
 
   const handleCreate = async () => {
     if (!site.name) return toast.error('Site name is required');
+    if (!site.city) return toast.error('City is required');
+    if (!site.floorAreaSqft || parseInt(site.floorAreaSqft) <= 0) return toast.error('Valid floor area is required');
     setLoading(true);
     try {
       const res = await api.post('/api/sites', { 
