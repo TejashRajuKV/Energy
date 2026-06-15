@@ -36,14 +36,25 @@ const FloatingIcons = () => (
 
 export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
   const { signup } = useAuthStore();
   const navigate = useNavigate();
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (form.name.trim().length < 2) newErrors.name = 'Name must be at least 2 characters';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Please enter a valid email address';
+    if (!passwordRules.every(rule => rule.test(form.password))) newErrors.password = 'Password does not meet all requirements';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setLoading(true);
     try {
       await signup(form.name, form.email, form.password);
@@ -115,22 +126,31 @@ export default function SignupPage() {
           <motion.form onSubmit={handleSubmit} variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <motion.div variants={itemVariants} className="form-group">
               <label className="form-label">Full Name</label>
-              <input id="signup-name" className="form-input" required autoComplete="name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} onFocus={() => setFocusedInput('name')} onBlur={() => setFocusedInput(null)} placeholder="Priya Sharma" style={{ transition: 'border-color 0.3s, box-shadow 0.3s' }} />
+              <input id="signup-name" className="form-input" required autoComplete="name" value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: null }); }} onFocus={() => setFocusedInput('name')} onBlur={() => setFocusedInput(null)} placeholder="Priya Sharma" style={{ transition: 'border-color 0.3s, box-shadow 0.3s', borderColor: errors.name ? 'var(--accent-terracotta)' : undefined }} />
+              <AnimatePresence>
+                {errors.name && <motion.span initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ color: 'var(--accent-terracotta)', fontSize: '0.8rem', marginTop: 4 }}>{errors.name}</motion.span>}
+              </AnimatePresence>
             </motion.div>
 
             <motion.div variants={itemVariants} className="form-group">
               <label className="form-label">Work Email</label>
-              <input id="signup-email" className="form-input" type="email" required autoComplete="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)} placeholder="priya@company.com" style={{ transition: 'border-color 0.3s, box-shadow 0.3s' }} />
+              <input id="signup-email" className="form-input" type="email" required autoComplete="email" value={form.email} onChange={e => { setForm({ ...form, email: e.target.value }); if (errors.email) setErrors({ ...errors, email: null }); }} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)} placeholder="priya@company.com" style={{ transition: 'border-color 0.3s, box-shadow 0.3s', borderColor: errors.email ? 'var(--accent-terracotta)' : undefined }} />
+              <AnimatePresence>
+                {errors.email && <motion.span initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ color: 'var(--accent-terracotta)', fontSize: '0.8rem', marginTop: 4 }}>{errors.email}</motion.span>}
+              </AnimatePresence>
             </motion.div>
 
             <motion.div variants={itemVariants} className="form-group">
               <label className="form-label">Password</label>
               <div style={{ position: 'relative' }}>
-                <input id="signup-password" className="form-input" type={showPass ? 'text' : 'password'} required autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onFocus={() => setFocusedInput('password')} onBlur={() => setFocusedInput(null)} placeholder="Create a strong password" style={{ paddingRight: '2.75rem', transition: 'border-color 0.3s, box-shadow 0.3s' }} />
+                <input id="signup-password" className="form-input" type={showPass ? 'text' : 'password'} required autoComplete="new-password" value={form.password} onChange={e => { setForm({ ...form, password: e.target.value }); if (errors.password) setErrors({ ...errors, password: null }); }} onFocus={() => setFocusedInput('password')} onBlur={() => setFocusedInput(null)} placeholder="Create a strong password" style={{ paddingRight: '2.75rem', transition: 'border-color 0.3s, box-shadow 0.3s', borderColor: errors.password ? 'var(--accent-terracotta)' : undefined }} />
                 <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color='var(--text-primary)'} onMouseLeave={(e) => e.target.style.color='var(--text-muted)'}>
                   {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <AnimatePresence>
+                {errors.password && <motion.span initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ color: 'var(--accent-terracotta)', fontSize: '0.8rem', marginTop: 4 }}>{errors.password}</motion.span>}
+              </AnimatePresence>
               <AnimatePresence>
                 {form.password && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, overflow: 'hidden' }}>
