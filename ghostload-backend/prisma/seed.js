@@ -2,9 +2,9 @@
  * GhostLoad — Database Seed
  * Seeds a demo organization, site, bill, schedule, equipment, and analysis
  */
-const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
+const prisma = require('../src/lib/db/prisma');
 
 async function main() {
   console.log('🌱 Seeding GhostLoad database...');
